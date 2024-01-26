@@ -17,27 +17,37 @@
 import asyncio
 import logging
 from typing import Optional
-
 from .transport import TCP, TCPAbridged
 from ..session.internals import DataCenter
 
 log = logging.getLogger(__name__)
 
-
 class Connection:
     MAX_CONNECTION_ATTEMPTS = 3
 
     def __init__(self, dc_id: int, test_mode: bool, ipv6: bool, proxy: dict, media: bool = False):
+        """
+        Initialize Connection object.
+
+        Parameters:
+        - dc_id: Data center ID
+        - test_mode: Boolean indicating test mode
+        - ipv6: Boolean indicating IPv6 usage
+        - proxy: Dictionary containing proxy details
+        - media: Boolean indicating media usage
+        """
         self.dc_id = dc_id
         self.test_mode = test_mode
         self.ipv6 = ipv6
         self.proxy = proxy
         self.media = media
-
         self.address = DataCenter(dc_id, test_mode, ipv6, media)
         self.protocol: TCP = None
 
     async def connect(self):
+        """
+        Attempt to establish a connection with the specified parameters.
+        """
         for i in range(Connection.MAX_CONNECTION_ATTEMPTS):
             self.protocol = TCPAbridged(self.ipv6, self.proxy)
 
@@ -56,15 +66,30 @@ class Connection:
                          "6" if self.ipv6 else "4")
                 break
         else:
-            log.warning("Connection failed! Trying again...")
-            raise ConnectionError
+            log.warning("Connection failed after multiple attempts.")
+            raise ConnectionError("Unable to establish connection after multiple attempts.")
 
     async def close(self):
+        """
+        Close the connection.
+        """
         await self.protocol.close()
         log.info("Disconnected")
 
     async def send(self, data: bytes):
+        """
+        Send data over the connection.
+
+        Parameters:
+        - data: Bytes to be sent.
+        """
         await self.protocol.send(data)
 
     async def recv(self) -> Optional[bytes]:
+        """
+        Receive data from the connection.
+
+        Returns:
+        - Optional bytes received.
+        """
         return await self.protocol.recv()
